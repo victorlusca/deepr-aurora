@@ -1,4 +1,4 @@
-DISPLAY_NAME=Aurora
+DISPLAY_NAME=AURORA
 DESCRIPTION=Assistente de voz pessoal (orbe, agenda, e-mails, noticias, briefing e base de conhecimento).
 MAIN=server.js
 MEMORY=512
