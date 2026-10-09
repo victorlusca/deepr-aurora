@@ -35,7 +35,8 @@ const files = [];
 const add = (name, data) => files.push({ name, data: Buffer.isBuffer(data) ? data : Buffer.from(data) });
 add('server.js', readFileSync(join(root, 'server.js')));
 add('dist/jarvis.html', readFileSync(join(root, 'dist/jarvis.html')));
-add('squarecloud.app', readFileSync(join(root, 'squarecloud.app')));
+// LF obrigatório: com CRLF (checkout no Windows) a SquareCloud lê "MAIN=server.js<CR>" e não acha o arquivo
+add('squarecloud.app', readFileSync(join(root, 'squarecloud.app'), 'utf8').replaceAll(String.fromCharCode(13), ''));
 add('package.json', `${JSON.stringify({ name: 'aurora', private: true, main: 'server.js', scripts: { start: 'node server.js' }, engines: { node: '>=20' } }, null, 2)}\n`);
 
 const env = { ...square, AURORA_HOST: '0.0.0.0', PORT: '80' };
