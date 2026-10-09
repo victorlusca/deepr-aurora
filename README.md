@@ -9,7 +9,6 @@ Assistente de voz pessoal no estilo Jarvis: um orbe que reage à fala, Second Br
 
 ```bash
 npm install
-cp src/profile/example.js src/profile/local.js   # seu perfil: nome, cidade, fuso, Second Brain…
 npm run build                                    # → dist/jarvis.html
 node server.js                                   # antena em 127.0.0.1:4242
 ```
@@ -20,14 +19,13 @@ Abra `http://127.0.0.1:4242` (ou o `dist/jarvis.html` com dois cliques) no Chrom
 
 | Arquivo | O que tem | No git? |
 |---|---|---|
-| `src/profile/example.js` | perfil fictício (usado pelos testes e pelo CI) | sim |
-| `src/profile/local.js` | **seu** perfil: cidade, fuso, contas, temas de notícias | não |
-| `data/brain.json` | o **Second Brain** (nome, metas, relações…): a IA lê e grava, você edita no grafo | não (nem no zip) |
+| `src/profile/example.js` | padrões neutros: nada pessoal, nada pré-configurado | sim |
+| navegador (localStorage) | **a Aurora de cada pessoa**: personalidade, Second Brain, cidade, notícias, agendas, contas | só no navegador |
 | `.env` / `.env.square` | pasta de notas, senha da hospedagem, telemetria | não |
 | `dist/`, `*.zip` | build e pacote com o seu perfil | não |
-| navegador (localStorage) | chave da OpenAI, senhas de app dos e-mails, links iCal | nunca sai dele, a não ser para a antena |
+| chaves e senhas | chave da OpenAI, senhas de app dos e-mails, links iCal | no navegador; só passam pela antena |
 
-O `npm run build` usa o `local.js` quando ele existe e o `example.js` quando não existe. O Second Brain começa **vazio** e vive no banco da antena (`GET/PUT /brain`). Diga "Ei Aurora, meu nome é…" e ela salva sozinha. Notas antigas que estiverem no navegador sobem para o banco na primeira conexão.
+**Cada navegador é uma Aurora.** Nada vem pronto além de uma personalidade sugerida (mordomo britânico). Na primeira ativação aparece **"Crie a sua Aurora"**: como ela te chama, seu nome, a personalidade (texto livre) e a cidade. O Second Brain começa vazio e ela aprende conversando (`[[SAVE]]`). Tudo isso fica só no navegador de quem usa; trocar de navegador ou computador é começar uma Aurora nova. Para mudar depois: ⚙ → Personalidade.
 
 ### Agenda e e-mails (⚙ no app)
 

@@ -1,5 +1,5 @@
 // Configurações (⚙) + Diagnóstico (observabilidade ao vivo).
-import { CONFIG, MODELS, PROFILE, PROVIDERS } from '../core/config.js';
+import { CONFIG, DEFAULT_PERSONA, MODELS, PROFILE, PROVIDERS } from '../core/config.js';
 import { esc, norm } from '../core/text.js';
 import { hhmm } from '../core/time.js';
 import { emit } from './bus.js';
@@ -7,16 +7,16 @@ import { checkDocs, docsStatusHTML, resultsHTML, searchDocs } from './docs.js';
 import { icon } from './icons.js';
 import { swap } from './motion.js';
 import { tel } from './obs.js';
-import { accounts, calendars, net, saveSettings, settings, TZ } from './state.js';
+import { accounts, brainStore, calendars, net, saveSettings, setNotes, settings, setupDone, TZ } from './state.js';
 import { store } from './store.js';
 import { $, closeModal, openModal, toast } from './ui.js';
 import { listPtVoices, pickVoice } from './voice.js';
 
 const SECTIONS = [
-  ['cerebro', 'Cérebro', 'bolt'], ['voz', 'Voz e movimento', 'wave'], ['agenda', 'Agenda', 'calendar'], ['emails', 'E-mails', 'mail'],
+  ['personalidade', 'Personalidade', 'user'], ['cerebro', 'Cérebro', 'bolt'], ['voz', 'Voz e movimento', 'wave'], ['agenda', 'Agenda', 'calendar'], ['emails', 'E-mails', 'mail'],
   ['noticias', 'Notícias', 'news'], ['briefing', 'Briefing', 'sparkle'], ['conhecimento', 'Conhecimento', 'brain'], ['telemetria', 'Telemetria', 'antenna'], ['diagnostico', 'Diagnóstico', 'activity']
 ];
-let section = 'cerebro', unsub = null;
+let section = 'personalidade', unsub = null, personaChanged = false;
 
 const field = (label, input, hint = '') => `<label class="field"><span>${label}</span>${input}${hint ? `<small>${hint}</small>` : ''}</label>`;
 const toggle = (id, label, on, hint = '') => `<label class="switch"><input type="checkbox" id="${id}"${on ? ' checked' : ''}><span class="track"><span class="thumb"></span></span><span class="switch-text"><b>${label}</b>${hint ? `<small>${hint}</small>` : ''}</span></label>`;
@@ -40,6 +40,16 @@ const topicRow = (t) => `<div class="list-row" data-row="topic" data-id="${esc(t
 function sectionHTML(id) {
   const s = settings.value;
   switch (id) {
+    case 'personalidade': {
+      const me = brainStore.notes.find((n) => n.area === 'meta');
+      return `<h3>${setupDone() ? 'Personalidade' : 'Crie a sua Aurora'}</h3>
+        <p class="lead">${setupDone() ? 'Quem a Aurora é e como ela fala com você. Fica salvo só neste navegador.' : 'Esta Aurora é sua: nada vem pronto. Defina como ela fala com você; o cérebro começa vazio e ela aprende conversando. Tudo fica só neste navegador.'}</p>
+        ${field('Como ela te chama', `<input id="pAddress" maxlength="40" value="${esc(CONFIG.address)}" placeholder="chefe">`)}
+        ${field('Seu nome', `<input id="pOwner" maxlength="60" value="${esc(me?.title || '')}" placeholder="como você se chama">`, 'Vira a nota "Você" do Second Brain.')}
+        ${field('Personalidade', `<textarea id="pPersona" rows="4" maxlength="600">${esc(CONFIG.persona)}</textarea>`, 'Escreva do seu jeito: tom, humor, formalidade, o que ela deve evitar.')}
+        <button type="button" class="btn ghost" id="pReset">Voltar à personalidade sugerida</button>
+        ${field('Sua cidade (clima)', `<input id="pCity" maxlength="60" value="${esc(s.digest.city || '')}" placeholder="ex.: Curitiba, PR">`, 'Opcional. Temas de notícias, agenda e e-mails ficam nas outras seções.')}`;
+    }
     case 'cerebro':
       return `<h3>Cérebro</h3><p class="lead">A chave da OpenAI fica no campo de chave do topo, salva só neste navegador.</p>
         <div class="choice-grid">${Object.entries(MODELS).map(([k, m]) => `<label class="choice"><input type="radio" name="model" value="${k}"${CONFIG.model === k ? ' checked' : ''}><span><b>${m.label}</b><small>${k}</small><small>US$ ${String(m.price[0]).replace('.', ',')} / ${String(m.price[1]).replace('.', ',')} por 1M tokens</small></span></label>`).join('')}</div>
@@ -129,6 +139,15 @@ function collect() {
     for (const i of r.querySelectorAll('[data-f]')) o[i.dataset.f] = i.value.trim();
     return o;
   });
+  if ($('pPersona')) {
+    const p = { address: val('pAddress').trim() || 'chefe', persona: val('pPersona').trim() || DEFAULT_PERSONA, done: true };
+    const old = store.get('aurora_persona', null);
+    personaChanged = !old?.done || old.address !== p.address || old.persona !== p.persona;
+    store.set('aurora_persona', p);
+    s.digest = { ...s.digest, city: val('pCity').trim() };
+    const name = val('pOwner').trim(), me = brainStore.notes.find((n) => n.area === 'meta');
+    if (name && name !== me?.title) setNotes(me ? brainStore.notes.map((n) => (n === me ? { ...n, title: name } : n)) : [...brainStore.notes, { id: `eu${Date.now()}`, area: 'meta', title: name, body: '' }], [me?.id || '']);
+  }
   const model = document.querySelector('input[name="model"]:checked')?.value;
   if (model) { CONFIG.model = model; store.setRaw('jarvis_model', model); }
   s.economy = chk('setEconomy', s.economy);
@@ -143,12 +162,12 @@ function collect() {
     s.newsCount = num('setNewsCount', 1, 10, 4);
     s.newsEvery = num('setNewsEvery', 10, 240, 30);
   }
-  s.digest = { ...s.digest, auto: chk('dgAuto', s.digest.auto), voice: chk('dgVoice', s.digest.voice), speak: chk('dgSpeak', s.digest.speak), weather: chk('dgWeather', s.digest.weather), size: val('dgSize') || s.digest.size, city: (val('dgCity') || s.digest.city).trim() || PROFILE.city.name };
+  s.digest = { ...s.digest, auto: chk('dgAuto', s.digest.auto), voice: chk('dgVoice', s.digest.voice), speak: chk('dgSpeak', s.digest.speak), weather: chk('dgWeather', s.digest.weather), size: val('dgSize') || s.digest.size, city: ($('dgCity') ? val('dgCity') : s.digest.city).trim() };
   s.telemetry = { ...s.telemetry, export: chk('telExport', s.telemetry.export) };
   return s;
 }
 
-export function openSettings(id = 'cerebro') {
+export function openSettings(id = 'personalidade') {
   openModal('setModal');
   showSection(id, false);
 }
@@ -170,6 +189,7 @@ export function initSettings() {
     showSection(b.dataset.sec);
   });
   $('setBody').addEventListener('click', (e) => {
+    if (e.target.closest('#pReset')) { $('pPersona').value = DEFAULT_PERSONA; return; }
     const add = e.target.closest('[data-add]');
     if (add) {
       const host = $({ cal: 'calList', mail: 'mailList', topic: 'topicList' }[add.dataset.add]);
@@ -193,5 +213,6 @@ export function initSettings() {
     closeModal('setModal');
     toast('Configurações salvas.');
     emit('settings-saved');
+    if (personaChanged) setTimeout(() => location.reload(), 700); // a nova personalidade vale em todos os módulos
   });
 }

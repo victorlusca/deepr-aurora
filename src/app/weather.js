@@ -15,18 +15,19 @@ export const weather = { data: store.get('jarvis_weather_cache', {}).data || nul
 
 async function geo() {
   const city = settings.value.digest.city || PROFILE.city.name;
+  if (!city) return null; // sem cidade definida: sem clima
   const g = store.get('jarvis_geo', null);
   if (g && g.city === city) return g;
   const [name, uf] = city.split(',').map((s) => s.trim());
-  let r = { city, lat: PROFILE.city.lat, lon: PROFILE.city.lon, label: PROFILE.city.label };
+  let r = PROFILE.city.lat != null && city === PROFILE.city.name ? { city, lat: PROFILE.city.lat, lon: PROFILE.city.lon, label: PROFILE.city.label } : null;
   try {
     const j = await (await fetchT(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=10&language=pt&format=json`, {}, 8000)).json();
     const res = (j.results || []).filter((x) => x.country_code === 'BR');
     const want = uf && UF[uf.toUpperCase()];
     const best = res.find((x) => want && x.admin1 === want) || res[0] || (j.results || [])[0];
     if (best) r = { city, lat: best.latitude, lon: best.longitude, label: `${best.name}${uf ? ` · ${uf.toUpperCase()}` : ''}` };
-  } catch { /* fica com a cidade do perfil */ }
-  store.set('jarvis_geo', r);
+  } catch { /* sem internet: tenta de novo depois */ }
+  if (r) store.set('jarvis_geo', r);
   return r;
 }
 
@@ -35,6 +36,7 @@ export async function refreshWeather(force = false) {
   if (!force && c.t && Date.now() - c.t < 30 * 60000 && c.data) { weather.data = c.data; emit('weather'); return; }
   await track(tel.span('clima.refresh', {}, async () => {
     const g = await geo();
+    if (!g) { weather.data = null; return; }
     const u = `https://api.open-meteo.com/v1/forecast?latitude=${g.lat}&longitude=${g.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=${encodeURIComponent(TZ)}&forecast_days=1`;
     const j = await (await fetchT(u, {}, 10000)).json();
     weather.data = {

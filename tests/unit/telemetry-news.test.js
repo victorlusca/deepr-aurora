@@ -20,7 +20,8 @@ describe('notícias', () => {
     expect(feedUrl('"Manaus" AM')).toBe('https://news.google.com/rss/search?q=%22Manaus%22%20AM%20when%3A3d&hl=pt-BR&gl=BR&ceid=BR:pt-419');
   });
   it('encontra o assunto pelo nome ou apelido', () => {
-    const t = DEFAULT_SETTINGS.newsTopics;
+    expect(DEFAULT_SETTINGS.newsTopics).toEqual([]); // nada vem pronto: cada navegador escolhe os seus
+    const t = [{ id: 'ia', label: 'IA', alias: 'ia, inteligencia artificial, ai' }, { id: 'cidade', label: 'Manaus', alias: 'manaus, minha cidade, cidade' }];
     expect(findTopic(t, 'inteligência artificial').id).toBe('ia');
     expect(findTopic(t, 'minha cidade').id).toBe('cidade');
     expect(findTopic(t, 'futebol')).toBeNull();

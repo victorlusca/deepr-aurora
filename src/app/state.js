@@ -6,6 +6,11 @@ import { store } from './store.js';
 export const VERSION = '6.0.0';
 // Servido pela própria antena (local em :4242 ou hospedado) → mesma origem; aberto com dois cliques → antena local.
 export const ANTENNA = /^https?:$/.test(location.protocol) ? location.origin : 'http://127.0.0.1:4242';
+/* personalidade criada neste navegador (aplicada antes dos outros módulos lerem o CONFIG) */
+const persona = store.get('aurora_persona', null);
+if (persona?.address) CONFIG.address = persona.address;
+if (persona?.persona) CONFIG.persona = persona.persona;
+export const setupDone = () => !!store.get('aurora_persona', null)?.done;
 export const TZ = CONFIG.tz;
 
 CONFIG.model = MODELS[store.raw('jarvis_model')] ? store.raw('jarvis_model') : CONFIG.model;

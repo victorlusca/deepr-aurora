@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 const APP = pathToFileURL(resolve('dist/e2e.html')).href;
 const ANT = 'http://127.0.0.1:4242';
 
-// Second Brain fictício (o real vive no banco da antena). notes: [] → estado vazio.
+// Second Brain fictício (o real vive no navegador de cada pessoa). notes: [] → estado vazio.
 const DEMO = [
   { id: 'eu', area: 'meta', title: 'Alex', body: 'Desenvolvedor que usa IA todos os dias.' },
   { id: 'metas', area: 'metas', title: 'Metas', body: 'Lançar o primeiro produto.' },
@@ -16,9 +16,23 @@ const DEMO = [
 /* Voz, microfone e reconhecimento simulados — o navegador de teste não tem áudio. */
 function stubs(opts) {
   window.__spoken = [];
-  localStorage.setItem('jarvis_notes', JSON.stringify(opts.notes));
+  // semeia o localStorage só no 1º carregamento da aba (num reload, mantém o que o app salvou)
+  const seed = !sessionStorage.getItem('__seeded');
+  sessionStorage.setItem('__seeded', '1');
+  if (seed) localStorage.setItem('jarvis_notes', JSON.stringify(opts.notes));
+  // a Aurora vem sem configuração: os testes já "criam" uma (menos o teste da primeira vez)
+  if (seed && !opts.fresh) {
+    localStorage.setItem('aurora_persona', JSON.stringify({ address: 'chefe', persona: 'formal britânico (mordomo)', done: true }));
+    localStorage.setItem('jarvis_settings', JSON.stringify({ digest: { city: 'São Paulo, SP' }, newsTopics: [
+      { id: 'ia', label: 'IA', q: '"inteligência artificial" OR IA', alias: 'ia, inteligencia artificial, ai' },
+      { id: 'saas', label: 'SaaS', q: 'SaaS', alias: 'saas' },
+      { id: 'tec', label: 'Tecnologia', q: 'tecnologia', alias: 'tecnologia, tech' },
+      { id: 'eco', label: 'Economia', q: 'economia', alias: 'economia' },
+      { id: 'cidade', label: 'São Paulo', q: '"São Paulo" SP', alias: 'sao paulo, minha cidade' }
+    ] }));
+  }
   // por padrão o briefing de hoje já rodou (o teste dele liga isso de volta)
-  if (!opts.autoDigest) localStorage.setItem('jarvis_last_digest', new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()));
+  if (seed && !opts.autoDigest) localStorage.setItem('jarvis_last_digest', new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()));
   class Utt { constructor(t) { this.text = t; } }
   window.SpeechSynthesisUtterance = Utt;
   Object.defineProperty(window, 'speechSynthesis', {
@@ -41,10 +55,10 @@ function stubs(opts) {
 
 const RSS = (t) => `<?xml version="1.0"?><rss><channel>${[1, 2, 3].map((i) => `<item><title>${t} manchete ${i} - Fonte</title><link>https://news.google.com/${i}</link><pubDate>${new Date(Date.now() - i * 3600000).toUTCString()}</pubDate><source>Fonte</source></item>`).join('')}</channel></rss>`;
 
-async function setup(page, { antenna = false, proxyDelay = 0, autoDigest = false, notes = DEMO } = {}) {
+async function setup(page, { antenna = false, proxyDelay = 0, autoDigest = false, notes = DEMO, fresh = false } = {}) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.addInitScript(stubs, { autoDigest, notes });
+  await page.addInitScript(stubs, { autoDigest, notes, fresh });
   await page.route(`${ANT}/**`, async (route) => {
     if (!antenna) return route.abort('connectionrefused');
     const url = new URL(route.request().url());
@@ -153,6 +167,7 @@ test('configurações: troca o cérebro e persiste', async ({ page }) => {
   await page.getByRole('button', { name: 'Configurações' }).click();
   const dlg = page.getByRole('dialog', { name: 'Configurações' });
   await expect(dlg).toBeVisible();
+  await dlg.getByRole('button', { name: 'Cérebro' }).click();
   await dlg.getByText('Máximo').click();
   await dlg.getByRole('button', { name: 'Salvar' }).click();
   await expect(dlg).toBeHidden();
@@ -238,4 +253,20 @@ test('Second Brain vazio: cérebro no centro e convite para a primeira nota', as
   await expect(page.locator('#graph svg')).toContainText('Second Brain vazio');
   await expect(page.locator('#graph svg .node')).toHaveCount(0);
   await expect(page.locator('#brainCount')).toHaveText('vazio');
+});
+
+test('primeira vez: nada vem pronto, a pessoa cria a personalidade da Aurora', async ({ page }) => {
+  await setup(page, { notes: [], fresh: true });
+  await activate(page);
+  const dlg = page.getByRole('dialog', { name: 'Configurações' });
+  await expect(dlg.getByRole('heading', { name: 'Crie a sua Aurora' })).toBeVisible();
+  await expect(dlg.locator('#pPersona')).toHaveValue(/mordomo/);
+  await dlg.locator('#pAddress').fill('capitão');
+  await dlg.locator('#pOwner').fill('Bia');
+  await dlg.locator('#pPersona').fill('descontraída e direta, com gírias leves');
+  await dlg.getByRole('button', { name: 'Salvar' }).click();
+  await page.waitForEvent('load');
+  const saved = await page.evaluate(() => [JSON.parse(localStorage.getItem('aurora_persona')), JSON.parse(localStorage.getItem('jarvis_notes'))]);
+  expect(saved[0]).toEqual({ address: 'capitão', persona: 'descontraída e direta, com gírias leves', done: true });
+  expect(saved[1]).toEqual([expect.objectContaining({ area: 'meta', title: 'Bia' })]);
 });

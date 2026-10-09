@@ -3,15 +3,19 @@ import { PROFILE } from '#profile';
 
 export { PROFILE };
 
+/** Única coisa que vem pronta: a personalidade sugerida (cada navegador pode reescrever no ⚙ → Personalidade). */
+export const DEFAULT_PERSONA = 'formal britânico (mordomo): educada, precisa, elegante, leal, com humor seco e sutil';
+export const DEFAULT_ADDRESS = 'chefe';
+
 export const CONFIG = {
   name: 'Aurora',
-  address: PROFILE.address,
+  address: DEFAULT_ADDRESS,
   themeColor: '#1f8b4c',
-  persona: 'formal britânico (mordomo)',
+  persona: DEFAULT_PERSONA,
   wakeWord: 'ei aurora',
   voiceGender: 'feminina',
   model: 'gpt-6.1-sol',
-  tz: PROFILE.tz
+  tz: PROFILE.tz || Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Sao_Paulo'
 };
 
 export const MODELS = {
