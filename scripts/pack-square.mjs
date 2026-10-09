@@ -61,7 +61,7 @@ if (docsSrc) {
   walk(base);
 }
 
-/* 3. zip (deflate) sem dependências */
+/* 3. zip (deflate) sem dependências — "criado em Unix" com permissão 644, senão o Linux da hospedagem pode não conseguir ler */
 function zip(entries) {
   const locals = [], centrals = [];
   let offset = 0;
@@ -75,9 +75,9 @@ function zip(entries) {
     head.writeUInt16LE(dosTime, 10); head.writeUInt16LE(dosDate, 12); head.writeUInt32LE(crc, 14);
     head.writeUInt32LE(comp.length, 18); head.writeUInt32LE(data.length, 22); head.writeUInt16LE(nameBuf.length, 26); head.writeUInt16LE(0, 28);
     const cen = Buffer.alloc(46);
-    cen.writeUInt32LE(0x02014b50, 0); cen.writeUInt16LE(20, 4); cen.writeUInt16LE(20, 6); cen.writeUInt16LE(0x0800, 8); cen.writeUInt16LE(8, 10);
+    cen.writeUInt32LE(0x02014b50, 0); cen.writeUInt16LE((3 << 8) | 20, 4); cen.writeUInt16LE(20, 6); cen.writeUInt16LE(0x0800, 8); cen.writeUInt16LE(8, 10);
     cen.writeUInt16LE(dosTime, 12); cen.writeUInt16LE(dosDate, 14); cen.writeUInt32LE(crc, 16); cen.writeUInt32LE(comp.length, 20);
-    cen.writeUInt32LE(data.length, 24); cen.writeUInt16LE(nameBuf.length, 28); cen.writeUInt32LE(offset, 42);
+    cen.writeUInt32LE(data.length, 24); cen.writeUInt16LE(nameBuf.length, 28); cen.writeUInt32LE((0o100644 << 16) >>> 0, 38); cen.writeUInt32LE(offset, 42);
     locals.push(head, nameBuf, comp);
     centrals.push(cen, nameBuf);
     offset += head.length + nameBuf.length + comp.length;
