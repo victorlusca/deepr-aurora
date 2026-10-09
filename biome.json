@@ -1,0 +1,53 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "files": {
+    "includes": [
+      "src/**/*.js",
+      "server.js",
+      "scripts/**/*.mjs",
+      "tests/**/*.js",
+      "*.config.js",
+      "*.config.mjs",
+      "*.cjs",
+      "!**/.stryker-tmp",
+      "!**/reports",
+      "!**/node_modules"
+    ]
+  },
+  "formatter": {
+    "enabled": false
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": {
+        "useTemplate": "off",
+        "noParameterAssign": "error",
+        "useSingleVarDeclarator": "off",
+        "noNonNullAssertion": "off"
+      },
+      "complexity": {
+        "noForEach": "off",
+        "useOptionalChain": "warn"
+      },
+      "suspicious": {
+        "noAssignInExpressions": "off",
+        "noControlCharactersInRegex": "off",
+        "noConsole": "off"
+      },
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error"
+      },
+      "a11y": {
+        "useKeyWithClickEvents": "off"
+      }
+    }
+  },
+  "javascript": {
+    "globals": [
+      "CSS"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/app/main.js",
+    "tests/**/*.{test,spec}.js"
+  ],
+  "project": [
+    "src/**/*.js",
+    "scripts/**/*.mjs",
+    "tests/**/*.js"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": [
+    "@stryker-mutator/command-runner"
+  ]
+}

@@ -1,0 +1,23 @@
+# dependências e relatórios
+node_modules/
+coverage/
+reports/
+test-results/
+playwright-report/
+.stryker-tmp/
+
+# build (contém o seu perfil) e pacote da hospedagem (contém perfil + senha)
+dist/
+jarvis.html
+*.zip
+
+# DADOS PESSOAIS — nunca no git
+src/profile/local.js
+.env
+.env.*
+!.env.example
+!.env.square.example
+knowledge/
+
+# ferramentas locais
+.claude/

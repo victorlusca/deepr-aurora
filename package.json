@@ -1,0 +1,44 @@
+{
+  "name": "aurora-ai-assistant",
+  "version": "6.0.0",
+  "private": true,
+  "description": "Aurora — assistente de voz pessoal (arquivo único) + antena em Node puro, local ou na SquareCloud.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "antena": "node server.js",
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "knip": "knip",
+    "arch": "depcruise src server.js --config .dependency-cruiser.cjs",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "coverage": "vitest run --coverage",
+    "test:e2e": "node scripts/build.mjs --profile=example --out=dist/e2e.html && playwright test",
+    "mutation": "stryker run",
+    "commitlint": "commitlint --edit",
+    "check": "npm run lint && npm run arch && npm run knip && npm run coverage && npm run test:e2e",
+    "pack:square": "node scripts/pack-square.mjs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "@playwright/test": "^1.64.0",
+    "@stryker-mutator/core": "^10.0.0",
+    "@vitest/coverage-v8": "^5.0.3",
+    "dependency-cruiser": "^18.5.0",
+    "esbuild": "^0.28.2",
+    "jsdom": "^29.1.1",
+    "knip": "^6.40.0",
+    "vitest": "^5.0.3"
+  },
+  "imports": {
+    "#profile": "./src/profile/example.js"
+  }
+}

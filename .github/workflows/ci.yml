@@ -1,0 +1,25 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  qualidade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Commitlint (mensagens do PR)
+        if: github.event_name == 'pull_request'
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }}
+      - run: npm run lint        # Biome
+      - run: npm run arch        # contrato de arquitetura (dependency-cruiser)
+      - run: npm run knip        # código e dependências mortas
+      - run: npm run coverage    # Vitest: unitários + integração
+      - uses: codecov/codecov-action@v5
+        with: { files: coverage/lcov.info, token: '${{ secrets.CODECOV_TOKEN }}' }
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e    # Playwright
+      - name: Mutação (Stryker)
+        run: npm run mutation

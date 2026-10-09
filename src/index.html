@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Aurora — assistente de voz pessoal com Second Brain, agenda, e-mails, notícias e briefing diário.">
+<title>Aurora</title>
+<style>/*__CSS__*/</style>
+</head>
+<body data-screen="boot" data-state="idle">
+<div class="backdrop" aria-hidden="true"></div>
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<!-- TELA 1 · BOOT -->
+<section class="screen screen-boot" aria-label="Inicializando">
+  <div class="mark" aria-hidden="true"></div>
+  <h1 class="wordmark">Aurora</h1>
+  <span class="rule" aria-hidden="true"></span>
+  <p class="syncing">SINCRONIZANDO DADOS...</p>
+  <p class="version">v5.0 · REBUILD</p>
+</section>
+
+<!-- TELA 2 · ATIVAÇÃO -->
+<section class="screen screen-activate" aria-label="Ativação">
+  <div class="mark" aria-hidden="true"></div>
+  <h1 class="wordmark">Aurora</h1>
+  <span class="rule" aria-hidden="true"></span>
+  <button class="btn-activate" id="btnActivate">► ATIVAR SISTEMA</button>
+  <p class="version">CLIQUE PARA INICIAR</p>
+</section>
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><b>aurora</b></div>
+    <button class="pill status" id="antPill" data-on=""><i class="led"></i><span>Antena…</span></button>
+    <div class="top-spacer"></div>
+    <div class="pill" id="clock"></div>
+    <div class="pill" id="wx"></div>
+    <label class="pill key" title="Chave da API da OpenAI (fica só neste navegador)">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.6 8.6-8.6M16.5 7l2.5 2.5M14 9.5l2 2"/></svg>
+      <input id="apiKey" type="password" placeholder="Chave OpenAI" autocomplete="off" spellcheck="false" aria-label="Chave da API da OpenAI">
+      <i class="led" id="keyDot" data-on=""></i>
+    </label>
+    <button class="icon-btn" id="btnSettings" aria-label="Configurações">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.6a1.7 1.7 0 0 1 3.4 0l.1.6a1.7 1.7 0 0 0 2.5 1l.5-.3a1.7 1.7 0 0 1 2.4 2.4l-.3.5a1.7 1.7 0 0 0 1 2.5l.6.1a1.7 1.7 0 0 1 0 3.4l-.6.1a1.7 1.7 0 0 0-1 2.5l.3.5a1.7 1.7 0 0 1-2.4 2.4l-.5-.3a1.7 1.7 0 0 0-2.5 1l-.1.6a1.7 1.7 0 0 1-3.4 0l-.1-.6a1.7 1.7 0 0 0-2.5-1l-.5.3a1.7 1.7 0 0 1-2.4-2.4l.3-.5a1.7 1.7 0 0 0-1-2.5l-.6-.1a1.7 1.7 0 0 1 0-3.4l.6-.1a1.7 1.7 0 0 0 1-2.5l-.3-.5a1.7 1.7 0 0 1 2.4-2.4l.5.3a1.7 1.7 0 0 0 2.5-1z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+  </header>
+
+  <main class="grid">
+    <section class="card stage" aria-label="Aurora">
+      <div class="stage-top">
+        <span class="state-chip"><i class="led"></i><span id="stateText">Em espera</span></span>
+        <span class="hint" id="hint" role="status" aria-live="polite"></span>
+      </div>
+      <div class="orb-wrap">
+        <canvas id="orb" aria-hidden="true"></canvas>
+        <button class="orb-hit" id="orbHit" aria-label="Falar com a Aurora"></button>
+      </div>
+      <div class="glances" id="glances"></div>
+      <div class="convo" aria-live="polite">
+        <div class="bubble you" id="bubbleYou" hidden><p></p></div>
+        <div class="bubble ai" id="bubbleAi" hidden><p></p></div>
+      </div>
+      <form class="composer" id="composer" autocomplete="off">
+        <button type="button" class="mic" id="btnMic" aria-pressed="false" aria-label="Microfone" data-state="off">
+          <svg class="ic on" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>
+          <svg class="ic off" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 9.5V6a3 3 0 0 0-5.7-1.3M9 9v2.5a3 3 0 0 0 4.6 2.5M5.5 11a6.5 6.5 0 0 0 10.3 5.3M18.5 11c0 .8-.1 1.5-.4 2.2M12 17.5V21M3.5 3.5l17 17"/></svg>
+        </button>
+        <input id="textInput" placeholder="ou digite e tecle Enter" enterkeyhint="send" aria-label="Mensagem para a Aurora">
+        <button type="submit" class="send" id="btnSend" data-mode="send" aria-label="Enviar">
+          <svg class="ic s-send" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg>
+          <svg class="ic s-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="3"/></svg>
+        </button>
+      </form>
+    </section>
+
+    <section class="card sheet" id="sheet" aria-label="Painéis">
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <div class="sheet-head">
+        <span class="muted" id="sheetMeta"></span>
+        <button class="icon-btn sm" id="sheetRefresh" aria-label="Atualizar">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5A8 8 0 0 0 6.2 6.2L4 8.5M4 4v4.5h4.5M4 12.5a8 8 0 0 0 13.8 5.3l2.2-2.3M20 20v-4.5h-4.5"/></svg>
+        </button>
+      </div>
+      <div class="sheet-body" id="sheetBody" role="tabpanel" aria-busy="false"></div>
+    </section>
+  </main>
+
+  <section class="card brain" id="brain" data-reveal aria-label="Second Brain">
+    <header class="brain-head">
+      <span class="brain-ic" aria-hidden="true">🧠</span>
+      <div><h2>Second Brain</h2><p class="muted">O que a Aurora sabe sobre a sua vida. Clique num nó para editar.</p></div>
+      <span class="chip" id="brainCount">—</span>
+      <button class="icon-btn" id="noteAdd" aria-label="Nova nota"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5.5v13M5.5 12h13"/></svg></button>
+      <button class="icon-btn" id="graphReload" aria-label="Recarregar grafo"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5A8 8 0 0 0 6.2 6.2L4 8.5M4 4v4.5h4.5M4 12.5a8 8 0 0 0 13.8 5.3l2.2-2.3M20 20v-4.5h-4.5"/></svg></button>
+    </header>
+    <div id="graph" class="graph"><div class="graph-skeleton sk" aria-label="Carregando grafo"></div></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <footer class="foot">
+    <span id="footUsage"></span><span>·</span><span id="footVoice">voz…</span><span>·</span><span id="footDocs"></span><span>·</span>
+    <button class="link" id="footDiag">Diagnóstico</button>
+  </footer>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<!-- editor de nota -->
+<div class="modal" id="noteModal" hidden role="dialog" aria-modal="true" aria-labelledby="noteHeading">
+  <form class="modal-card" id="noteForm">
+    <header class="modal-head"><h2 id="noteHeading">Nota</h2><button type="button" class="icon-btn sm" data-close aria-label="Fechar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button></header>
+    <div class="modal-body">
+      <label class="field"><span>Título</span><input id="noteTitle" maxlength="40" autofocus></label>
+      <label class="field"><span>Área</span><select id="noteArea"></select></label>
+      <label class="field"><span>Conteúdo</span><textarea id="noteBody" rows="5"></textarea></label>
+    </div>
+    <footer class="modal-foot">
+      <button type="button" class="btn danger" id="noteDel"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 4h4M7 7l.8 11.2A2 2 0 0 0 9.8 20h4.4a2 2 0 0 0 2-1.8L17 7"/></svg>Excluir</button>
+      <button type="button" class="btn" data-close>Cancelar</button>
+      <button type="button" class="btn primary" id="noteSave">Salvar</button>
+    </footer>
+  </form>
+</div>
+
+<!-- configurações -->
+<div class="modal" id="setModal" hidden role="dialog" aria-modal="true" aria-labelledby="setHeading">
+  <div class="modal-card wide">
+    <header class="modal-head"><h2 id="setHeading">Configurações</h2><button type="button" class="icon-btn sm" data-close aria-label="Fechar"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button></header>
+    <div class="settings">
+      <nav class="set-nav" id="setNav" aria-label="Seções"></nav>
+      <div class="set-body" id="setBody"></div>
+    </div>
+    <footer class="modal-foot"><button type="button" class="btn" data-close>Cancelar</button><button type="button" class="btn primary" id="setSave">Salvar</button></footer>
+  </div>
+</div>
+
+<script>/*__JS__*/</script>
+</body>
+</html>
