@@ -1,5 +1,4 @@
 // Morning Digest: junta tudo localmente, faz UMA chamada compacta (ou usa o modelo offline) e fala.
-import { PROFILE } from '../core/config.js';
 import { packText, templateDigest } from '../core/digest.js';
 import { digestSystem } from '../core/prompt.js';
 import { esc } from '../core/text.js';
@@ -32,7 +31,7 @@ function pack() {
     unread: mail.items.filter((m) => !m.lido).length,
     actions,
     heads: settings.value.newsTopics.map((t) => ({ t: t.label, h: topHeadlines(t.id, 3).map((i) => i.title) })).filter((x) => x.h.length),
-    goals: brainStore.notes.filter((n) => n.area === 'metas' || PROFILE.goalNotes.includes(n.id)).slice(0, 2).map((n) => `${n.title}: ${n.body}`)
+    goals: brainStore.notes.filter((n) => n.area === 'metas').slice(0, 2).map((n) => `${n.title}: ${n.body}`)
   };
 }
 

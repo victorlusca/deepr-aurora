@@ -18,6 +18,7 @@ src/profile/local.js
 !.env.example
 !.env.square.example
 knowledge/
+data/
 
 # ferramentas locais
 .claude/

@@ -83,3 +83,28 @@ describe('modo hospedado · onde escutar', () => {
     s.close();
   });
 });
+
+describe('Second Brain · banco da antena', () => {
+  it('começa vazio, salva, lê de volta e recusa lixo', async () => {
+    const file = join(dir, 'data', 'brain.json');
+    const s = antena.createServer({ log: () => {}, env: {}, docsDir: join(dir, 'x'), brainFile: file });
+    await new Promise((r) => s.listen(0, '127.0.0.1', r));
+    const b = `http://127.0.0.1:${s.address().port}/brain`;
+    expect((await (await fetch(b)).json()).notes).toEqual([]);
+    const notes = [{ id: 'eu', area: 'meta', title: 'Alex', body: 'Dev.', extra: 'ignorado' }];
+    const put = await fetch(b, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ notes }) });
+    expect(put.status).toBe(200);
+    const back = await (await fetch(b)).json();
+    expect(back.notes).toEqual([{ id: 'eu', area: 'meta', title: 'Alex', body: 'Dev.' }]);
+    expect(back.updatedAt).toMatch(/^20/);
+    expect((await fetch(b, { method: 'PUT', body: '{"notes":[{"id":"x"}]}' })).status).toBe(400);
+    expect((await fetch(b, { method: 'PUT', body: 'não é json' })).status).toBe(400);
+    expect((await (await fetch(b)).json()).notes).toHaveLength(1);
+    s.close();
+  });
+  it('cleanBrain corta campos longos e limita a quantidade', () => {
+    expect(antena.cleanBrain({ notes: [{ id: 'a', title: 'T', body: 'x'.repeat(9000) }] })[0]).toMatchObject({ area: 'meta', body: 'x'.repeat(4000) });
+    expect(antena.cleanBrain({ notes: Array.from({ length: 501 }, (_, i) => ({ id: `n${i}`, title: 't' })) })).toBeNull();
+    expect(antena.cleanBrain({})).toBeNull();
+  });
+});

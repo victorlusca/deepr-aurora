@@ -1,5 +1,5 @@
 // Estado compartilhado do app.
-import { CONFIG, DEFAULT_ACCOUNTS, MODELS, mergeSettings, NOTES } from '../core/config.js';
+import { CONFIG, DEFAULT_ACCOUNTS, MODELS, mergeSettings } from '../core/config.js';
 import { emit } from './bus.js';
 import { store } from './store.js';
 
@@ -29,22 +29,13 @@ export function setState(st) {
 
 export const net = { antenna: null, exporters: {} };
 
-export const brainStore = { notes: loadNotes() };
-function loadNotes() {
-  const saved = store.get('jarvis_notes', null);
-  if (Array.isArray(saved) && saved.length) return saved;
-  const fresh = NOTES.map((n) => ({ ...n }));
-  store.set('jarvis_notes', fresh);
-  return fresh;
-}
+// Second Brain: começa vazio; a fonte de verdade é o banco da antena (brainsync.js). Aqui fica a cópia de trabalho.
+const savedNotes = store.get('jarvis_notes', null);
+export const brainStore = { notes: Array.isArray(savedNotes) ? savedNotes : [] };
 export function setNotes(list, touched = []) {
   brainStore.notes = list;
   store.set('jarvis_notes', list);
   emit('notes', touched);
-}
-export function reloadNotes() {
-  const saved = store.get('jarvis_notes', null);
-  if (Array.isArray(saved) && saved.length) setNotes(saved);
 }
 
 export const getKey = () => store.raw('openai_key').trim();

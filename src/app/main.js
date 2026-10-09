@@ -7,6 +7,7 @@ import { dateLong, hhmm, MONTHS, WD_SHORT, zParts } from '../core/time.js';
 import { agendaCompact, refreshAgenda, tickCountdowns, voiceNext, voiceToday, voiceWeek } from './agenda.js';
 import { checkAntenna } from './antenna.js';
 import { addContext, addQuestionContext, askAI, modelLabel, usageToday } from './brain.js';
+import { installBrainSync, pullBrain } from './brainsync.js';
 import { digestDue, lastDigestText, runDigest } from './briefing.js';
 import { on } from './bus.js';
 import { checkDocs, docs, docsContext } from './docs.js';
@@ -20,7 +21,7 @@ import { installObservability, tel } from './obs.js';
 import { createOrb } from './orb.js';
 import { initSettings, openSettings } from './settings.js';
 import { initSheet, paintGlances } from './sheet.js';
-import { accounts, getKey, net, reloadNotes, session, setKey, setState, settings, TZ, VERSION } from './state.js';
+import { accounts, getKey, net, session, setKey, setState, settings, TZ, VERSION } from './state.js';
 import { $, bindModals, revealOnScroll, toast } from './ui.js';
 import * as voice from './voice.js';
 import { refreshWeather, voiceWeather, weather, weatherDesc } from './weather.js';
@@ -233,7 +234,7 @@ function bind() {
     else { session.awakeUntil = Date.now() + 15000; voice.chime(); setState('listening'); showBubble('ai', `Pois não, ${A}?`); }
   });
   $('footDiag').addEventListener('click', () => openSettings('diagnostico'));
-  $('graphReload').addEventListener('click', reloadNotes);
+  $('graphReload').addEventListener('click', pullBrain);
   $('btnActivate').addEventListener('click', activate);
   on('state', paintState);
   on('mic', (why) => {
@@ -245,7 +246,7 @@ function bind() {
     paintState();
   });
   on('voice', (v) => { $('footVoice').textContent = v ? v.name.replace(/Microsoft |Google |Online \(Natural\)| - Portuguese \(Brazil\)/g, '').trim() : 'voz padrão'; });
-  on('antenna', (onl) => { paintHeader(); checkDocs(); if (onl) { refreshAgenda(true); refreshMail(true); refreshNews(true); } });
+  on('antenna', (onl) => { paintHeader(); checkDocs(); if (onl) { pullBrain(); refreshAgenda(true); refreshMail(true); refreshNews(true); } });
   on('docs', paintHeader);
   on('weather', paintHeader);
   on('usage', paintHeader);
@@ -310,7 +311,8 @@ function init() {
   setupTimers();
   // lazy: o orbe (WebGL) só liga quando o navegador estiver ocioso
   (window.requestIdleCallback || ((f) => setTimeout(f, 200)))(startLoop);
-  checkAntenna(true).then(() => { checkDocs(); paintHeader(); refreshAgenda(true); refreshMail(false); refreshNews(false); });
+  installBrainSync();
+  checkAntenna(true).then(() => { checkDocs(); pullBrain(); paintHeader(); refreshAgenda(true); refreshMail(false); refreshNews(false); });
   refreshWeather(false);
   // TELA 1 (boot) → TELA 2 (ativação) após ~2,2 s
   setTimeout(() => { if (!session.activated) document.body.dataset.screen = 'activate'; }, 2200);

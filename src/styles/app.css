@@ -331,24 +331,40 @@ body[data-state='speaking'] .state-chip .led { background: var(--ok); box-shadow
 .brain-head h2 { margin: 0; font-size: 18px; font-weight: 800; }
 .brain-head p { margin: 0; font-size: 13px; }
 .brain-head .chip { margin-left: auto; }
-.brain-ic { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: oklch(60% 0.15 290 / 0.18); font-size: 20px; }
-.graph { position: relative; width: 100%; aspect-ratio: 1000 / 540; max-height: 74vh; }
-.graph svg { width: 100%; height: 100%; display: block; }
+.brain-ic { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; color: #6ff0a8; background: radial-gradient(circle at 35% 30%, oklch(70% 0.16 155 / 0.35), oklch(45% 0.12 155 / 0.18)); box-shadow: inset 0 0 0 1px oklch(80% 0.12 155 / 0.25); }
+.brain-ic .ic { width: 22px; height: 22px; }
+.graph { position: relative; width: 100%; aspect-ratio: 1000 / 540; max-height: 74vh; border-radius: var(--r-lg); background: radial-gradient(ellipse at 50% 50%, oklch(45% 0.1 155 / 0.16), transparent 62%); }
+.graph svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .graph-skeleton { position: absolute; inset: 24px; border-radius: var(--r-lg); }
-.graph .node { cursor: pointer; outline: none; }
-.graph .node text { font-family: var(--font); font-size: 14px; font-weight: 700; fill: #e9fff7; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #050807; stroke-width: 4px; }
-.graph .node:hover .nd, .graph .node:focus-visible .nd { stroke: #fff; stroke-width: 2; }
-.graph .halo { transform-box: fill-box; transform-origin: center; animation: breathe 3.4s ease-in-out infinite; }
-.graph .core { transform-box: fill-box; transform-origin: center; animation: corePulse 2.6s ease-in-out infinite; }
-.graph .edge { animation: dash 2.4s linear infinite; }
+.graph .glyph { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.graph .core-glyph { color: #effff6; stroke-width: 1.35; filter: drop-shadow(0 0 6px rgb(111 240 168 / 0.6)); }
+.graph .aura { transform-box: fill-box; transform-origin: center; animation: auraPulse 4.2s ease-in-out infinite; }
+.graph .core { filter: drop-shadow(0 0 18px rgb(31 139 76 / 0.75)); }
+.graph .core-ring { transform-box: fill-box; transform-origin: center; animation: spin 26s linear infinite; }
+.graph .den { fill: none; stroke-width: 1.4; stroke-opacity: 0.22; stroke-linecap: round; }
+.graph .den-flow { fill: none; stroke-width: 1.4; stroke-opacity: 0.5; stroke-linecap: round; stroke-dasharray: 1 13; animation: dash 3.2s linear infinite; }
+.graph .syn { stroke-width: 1; stroke-opacity: 0.18; stroke-dasharray: 3 6; }
+.graph .pulse { filter: url(#sbGlow); }
+.graph .node { cursor: pointer; outline: none; color: var(--c); }
+.graph .node .nd { fill: oklch(22% 0.03 160 / 0.92); stroke: var(--c); stroke-width: 1.6; transition: transform 0.25s var(--ease-out), stroke-width 0.2s; transform-box: fill-box; transform-origin: center; }
+.graph .node .halo { fill: none; stroke: var(--c); stroke-width: 1.2; opacity: 0.25; transform-box: fill-box; transform-origin: center; animation: breathe 3.4s ease-in-out infinite; }
+.graph .node text { font-family: var(--font); font-size: 14px; font-weight: 700; fill: #e9fff7; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: #06100b; stroke-width: 4px; stroke-linejoin: round; }
+.graph .node:hover .nd, .graph .node:focus-visible .nd { transform: scale(1.12); stroke-width: 2.4; }
+.graph .node:focus-visible .halo { opacity: 0.9; }
+.graph .node.fire .nd { animation: fire 0.6s var(--ease-out); }
 .graph .node.flash .nd { animation: nodeFlash 0.32s var(--ease-out) 8; }
-@keyframes breathe { 0%, 100% { opacity: 0.2; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.25); } }
-@keyframes corePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+.graph .empty-t { font-family: var(--font); font-size: 19px; font-weight: 800; fill: #e9fff7; text-anchor: middle; }
+.graph .empty-s { font-family: var(--font); font-size: 14px; font-weight: 600; fill: #9fb8ad; text-anchor: middle; }
+@keyframes breathe { 0%, 100% { opacity: 0.15; transform: scale(1); } 50% { opacity: 0.55; transform: scale(1.18); } }
+@keyframes auraPulse { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes dash { to { stroke-dashoffset: -28; } }
+@keyframes fire { 0% { stroke-width: 3.6; filter: drop-shadow(0 0 9px var(--c)); } 100% { stroke-width: 1.6; filter: none; } }
 @keyframes nodeFlash { 50% { opacity: 0.2; } }
-body[data-ambient='off'] .graph .halo, body[data-ambient='off'] .graph .core, body[data-ambient='off'] .graph .edge { animation: none; }
+body[data-ambient='off'] .graph .halo, body[data-ambient='off'] .graph .aura, body[data-ambient='off'] .graph .core-ring, body[data-ambient='off'] .graph .den-flow { animation: none; }
 .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 12px 16px 16px; font-size: 13px; color: var(--text-2); }
 .lg { display: inline-flex; align-items: center; gap: 6px; }
+.lg .ic { width: 15px; height: 15px; }
 .lg.ok { margin-left: auto; color: var(--ok); font-weight: 700; }
 
 .foot { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 18px 0 4px; font-size: 12px; color: var(--text-3); }

@@ -5,9 +5,18 @@ import { expect, test } from '@playwright/test';
 const APP = pathToFileURL(resolve('dist/e2e.html')).href;
 const ANT = 'http://127.0.0.1:4242';
 
+// Second Brain fictício (o real vive no banco da antena). notes: [] → estado vazio.
+const DEMO = [
+  { id: 'eu', area: 'meta', title: 'Alex', body: 'Desenvolvedor que usa IA todos os dias.' },
+  { id: 'metas', area: 'metas', title: 'Metas', body: 'Lançar o primeiro produto.' },
+  { id: 'projeto', area: 'projetos', title: 'Projeto', body: 'Um SaaS em construção.' },
+  { id: 'amigo', area: 'relacoes', title: 'Sam', body: 'Melhor amigo.' }
+];
+
 /* Voz, microfone e reconhecimento simulados — o navegador de teste não tem áudio. */
 function stubs(opts) {
   window.__spoken = [];
+  localStorage.setItem('jarvis_notes', JSON.stringify(opts.notes));
   // por padrão o briefing de hoje já rodou (o teste dele liga isso de volta)
   if (!opts.autoDigest) localStorage.setItem('jarvis_last_digest', new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()));
   class Utt { constructor(t) { this.text = t; } }
@@ -32,10 +41,10 @@ function stubs(opts) {
 
 const RSS = (t) => `<?xml version="1.0"?><rss><channel>${[1, 2, 3].map((i) => `<item><title>${t} manchete ${i} - Fonte</title><link>https://news.google.com/${i}</link><pubDate>${new Date(Date.now() - i * 3600000).toUTCString()}</pubDate><source>Fonte</source></item>`).join('')}</channel></rss>`;
 
-async function setup(page, { antenna = false, proxyDelay = 0, autoDigest = false } = {}) {
+async function setup(page, { antenna = false, proxyDelay = 0, autoDigest = false, notes = DEMO } = {}) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.addInitScript(stubs, { autoDigest });
+  await page.addInitScript(stubs, { autoDigest, notes });
   await page.route(`${ANT}/**`, async (route) => {
     if (!antenna) return route.abort('connectionrefused');
     const url = new URL(route.request().url());
@@ -122,17 +131,17 @@ test('pergunta livre vai para a OpenAI com Second Brain e memória viva', async 
   });
   await activate(page);
   await page.getByLabel('Chave da API da OpenAI').fill('sk-teste-123');
-  await expect(page.locator('#brainCount')).toContainText('9 notas');
+  await expect(page.locator('#brainCount')).toContainText('4 notas');
   await page.getByLabel('Mensagem para a Aurora').fill('comecei a treinar três vezes por semana');
   await page.keyboard.press('Enter');
   await expect(page.locator('#bubbleAi')).toHaveText('Excelente escolha, chefe. Anotei seu novo hábito.');
   expect(auth).toBe('Bearer sk-teste-123');
   expect(body.model).toBe('gpt-6.1-sol');
   expect(body.instructions).toContain('SECOND BRAIN');
-  expect(body.instructions).toContain('Projeto: Produto principal');
+  expect(body.instructions).toContain('Projeto: Um SaaS em construção.');
   expect(body.instructions).toContain('Agenda de hoje:');
   expect(body.input.at(-1)).toEqual({ role: 'user', content: 'comecei a treinar três vezes por semana' });
-  await expect(page.locator('#brainCount')).toContainText('10 notas');
+  await expect(page.locator('#brainCount')).toContainText('5 notas');
   const spoken = await page.evaluate(() => window.__spoken.at(-1));
   expect(spoken).not.toContain('[[SAVE');
   await expect(page.locator('#footUsage')).toContainText('1 chamadas');
@@ -170,8 +179,9 @@ test('Second Brain carrega sob demanda e o nó abre o editor', async ({ page }) 
   await activate(page);
   await expect(page.locator('#graph svg')).toHaveCount(0);
   await page.locator('#brain').scrollIntoViewIfNeeded();
-  await expect(page.locator('#graph svg .node')).toHaveCount(9);
-  await page.locator('#graph .node[data-id="projeto"]').click();
+  await expect(page.locator('#graph svg .node')).toHaveCount(4);
+  await page.locator('#graph .node[data-id="projeto"]').focus(); // teclado: o halo "respira", então o nó nunca fica estático para um clique
+  await page.keyboard.press('Enter');
   const dlg = page.getByRole('dialog', { name: 'Editar nota' });
   await expect(dlg.getByLabel('Título')).toHaveValue('Projeto');
 });
@@ -217,4 +227,15 @@ test('pergunta sobre o projeto leva os trechos da documentação ao prompt', asy
   await page.getByLabel('Buscar na documentação').fill('bateponto');
   await page.keyboard.press('Enter');
   await expect(page.locator('#docResults')).toContainText('Bot/Commands/bateponto.md');
+});
+
+test('Second Brain vazio: cérebro no centro e convite para a primeira nota', async ({ page }) => {
+  await page.setViewportSize({ width: 1360, height: 360 });
+  await setup(page, { notes: [] });
+  await activate(page);
+  await page.locator('#brain').scrollIntoViewIfNeeded();
+  await expect(page.locator('#graph svg .core-glyph')).toHaveCount(1);
+  await expect(page.locator('#graph svg')).toContainText('Second Brain vazio');
+  await expect(page.locator('#graph svg .node')).toHaveCount(0);
+  await expect(page.locator('#brainCount')).toHaveText('vazio');
 });

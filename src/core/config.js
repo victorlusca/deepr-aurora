@@ -31,9 +31,6 @@ export const AREA = {
   meta: { label: 'Você', color: '#8a90a6' }
 };
 
-export const NOTES = PROFILE.notes;
-export const REL = PROFILE.rel;
-
 export const DEFAULT_SETTINGS = {
   economy: true,
   ambientMotion: true,

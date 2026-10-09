@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { AREA, DEFAULT_SETTINGS, mergeSettings, NOTES, REL } from '../../src/core/config.js';
+import { AREA, DEFAULT_SETTINGS, mergeSettings } from '../../src/core/config.js';
 import { packText, templateDigest } from '../../src/core/digest.js';
 import { applySaves, extractSaves, graphEdges } from '../../src/core/memory.js';
 import { buildRequest, costOf, errorSpeech, extractText } from '../../src/core/openai.js';
-import { buildContext, buildSystemPrompt, digestSystem } from '../../src/core/prompt.js';
+import { buildContext, buildSystemPrompt, digestSystem, ownerName } from '../../src/core/prompt.js';
 import { heuristic, parseTriage, pruneCache, triagePrompt } from '../../src/core/triage.js';
+
+// Second Brain fictício (o real vive no banco da antena, nunca no código).
+const NOTES = [
+  { id: 'eu', area: 'meta', title: 'Alex', body: 'Desenvolvedor que usa IA todos os dias.' },
+  { id: 'metas', area: 'metas', title: 'Metas', body: 'Lançar o primeiro produto.' },
+  { id: 'projeto', area: 'projetos', title: 'Projeto', body: 'Um SaaS em construção.' },
+  { id: 'amigo', area: 'relacoes', title: 'Sam', body: 'Melhor amigo.' }
+];
+const REL = [['metas', 'eu'], ['metas', 'projeto'], ['eu', 'amigo']];
 
 describe('memória viva', () => {
   it('extrai [[SAVE]] e limpa a resposta', () => {
@@ -24,7 +33,7 @@ describe('memória viva', () => {
   });
   it('grafo: relações fixas + notas novas ligadas à área e ao hub', () => {
     const edges = graphEdges([...NOTES, { id: 'x', area: 'relacoes', title: 'X', body: '' }], REL);
-    expect(edges.length).toBe(REL.length + 2); // 1 colega de área (perfil de exemplo) + metas
+    expect(edges.length).toBe(REL.length + 2); // 1 colega de área + metas
     expect(edges).toContainEqual(['x', 'metas']);
     expect(graphEdges([{ id: 'a', area: 'meta' }], [['a', 'a'], ['a', 'z']])).toEqual([]);
   });
@@ -32,7 +41,12 @@ describe('memória viva', () => {
 
 describe('prompt e configurações', () => {
   it('system prompt traz identidade, Second Brain inteiro e protocolo de memória', () => {
+    expect(ownerName(NOTES)).toBe('Alex');
+    expect(ownerName([])).toBe('seu usuário');
+    expect(buildSystemPrompt([])).toContain('vazio por enquanto');
+    expect(buildSystemPrompt([])).toContain('assistente pessoal de voz de seu usuário');
     const p = buildSystemPrompt(NOTES);
+    expect(p).toContain('assistente pessoal de voz de Alex');
     expect(p).toContain('Aurora');
     expect(p).toContain('"chefe"');
     for (const n of NOTES) expect(p).toContain(n.title);

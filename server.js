@@ -8,6 +8,7 @@
  *
  * Rotas:
  *   GET  /                     → o próprio app (dist/jarvis.html)
+ *   GET  /brain · PUT /brain   → Second Brain (data/brain.json — a IA lê e grava; fica fora do git)
  *   GET  /health               → status + exportadores de telemetria ativos
  *   GET  /proxy?url=...        → agenda (calendar.google.com) e notícias (news.google.com) com CORS liberado
  *   POST /emails               → {host, usuario, senhaApp, quantidade} → caixa de entrada via IMAP (somente leitura)
@@ -53,7 +54,7 @@ function maskUrl(u) {
 /* ── CORS ── */
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Private-Network', 'true');
   res.setHeader('Access-Control-Max-Age', '600');
@@ -643,12 +644,46 @@ function createDocs(dir, log) {
 }
 
 /* ══════════════ SERVIDOR ══════════════ */
-const ROUTE_NAMES = { '/': 'app', '/index.html': 'app', '/health': 'health', '/proxy': 'proxy', '/emails': 'emails', '/telemetry/traces': 'telemetry', '/telemetry/logs': 'telemetry', '/telemetry/sentry': 'telemetry', '/docs/status': 'docs', '/docs/search': 'docs', '/docs/toc': 'docs' };
+const ROUTE_NAMES = { '/brain': 'brain', '/': 'app', '/index.html': 'app', '/health': 'health', '/proxy': 'proxy', '/emails': 'emails', '/telemetry/traces': 'telemetry', '/telemetry/logs': 'telemetry', '/telemetry/sentry': 'telemetry', '/docs/status': 'docs', '/docs/search': 'docs', '/docs/toc': 'docs' };
 
 const defaultDocsDir = (env) => env.DOCS_DIR || path.join(__dirname, 'knowledge');
+/* ══════════════ SECOND BRAIN: banco JSON da antena (data/brain.json, fora do git e do zip) ══════════════ */
+const BRAIN_LIMITS = { notes: 500, id: 60, area: 30, title: 120, body: 4000 };
+function cleanBrain(input) {
+  const str = (v, max) => String(v ?? '').slice(0, max);
+  const notes = Array.isArray(input?.notes) ? input.notes : null;
+  if (!notes || notes.length > BRAIN_LIMITS.notes) return null;
+  const out = [];
+  for (const n of notes) {
+    if (!n || typeof n !== 'object' || !n.id || !n.title) return null;
+    out.push({ id: str(n.id, BRAIN_LIMITS.id), area: str(n.area || 'meta', BRAIN_LIMITS.area), title: str(n.title, BRAIN_LIMITS.title), body: str(n.body, BRAIN_LIMITS.body) });
+  }
+  return out;
+}
+function createBrainDb(file) {
+  const read = () => {
+    try {
+      const j = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return { notes: cleanBrain(j) || [], updatedAt: j.updatedAt || null };
+    } catch {
+      return { notes: [], updatedAt: null };
+    }
+  };
+  const write = (notes) => {
+    const doc = { notes, updatedAt: new Date().toISOString() };
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const tmp = `${file}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(doc, null, 2));
+    fs.renameSync(tmp, file); // troca atômica: nunca fica um arquivo pela metade
+    return doc;
+  };
+  return { read, write, file };
+}
+
 const defaultAppFile = (env) => env.AURORA_APP || [path.join(__dirname, 'dist', 'jarvis.html'), path.join(__dirname, 'jarvis.html')].find((f) => fs.existsSync(f));
 
-function createServer({ fetch: doFetch = fetchUrl, connect, env = process.env, log = defaultLog, post, docsDir = defaultDocsDir(env), appFile = defaultAppFile(env), password = env.AURORA_PASSWORD } = {}) {
+function createServer({ fetch: doFetch = fetchUrl, connect, env = process.env, log = defaultLog, post, docsDir = defaultDocsDir(env), appFile = defaultAppFile(env), password = env.AURORA_PASSWORD, brainFile = env.BRAIN_FILE || path.join(__dirname, 'data', 'brain.json') } = {}) {
+  const brain = createBrainDb(brainFile);
   const tel = createTelemetry(env, post);
   const docs = createDocs(docsDir, log);
   const gate = createGate(password);
@@ -722,6 +757,13 @@ function createServer({ fetch: doFetch = fetchUrl, connect, env = process.env, l
     const route = ROUTE_NAMES[u.pathname] || 'desconhecida';
     try {
       if (req.method === 'GET' && (u.pathname === '/' || u.pathname === '/index.html')) serveApp(res);
+      else if (req.method === 'GET' && u.pathname === '/brain') json(res, 200, { ok: true, ...brain.read() });
+      else if (req.method === 'PUT' && u.pathname === '/brain') {
+        let notes;
+        try { notes = cleanBrain(JSON.parse(await readBody(req, 2 * 1024 * 1024))); } catch { notes = null; }
+        if (!notes) json(res, 400, { ok: false, mensagem: 'Second Brain inválido' });
+        else { const d = brain.write(notes); log('🧠 BRAIN salvo:', notes.length, 'notas'); json(res, 200, { ok: true, updatedAt: d.updatedAt }); }
+      }
       else if (req.method === 'GET' && u.pathname === '/health') json(res, 200, { ok: true, nome: 'antena-aurora', versao: VERSION, proxy: PROXY_HOSTS, imap: IMAP_HOSTS, exporters: tel.exporters, docs: docs.status().available });
       else if (req.method === 'GET' && u.pathname === '/docs/status') json(res, 200, docs.status());
       else if (req.method === 'GET' && u.pathname === '/docs/toc') json(res, 200, { ok: true, toc: docs.toc() });
@@ -800,6 +842,6 @@ function start() {
   process.on('uncaughtException', (e) => { console.error('  ✖', e.message); server.telemetry.captureError(e, { origem: 'uncaughtException' }); });
 }
 
-module.exports = { createServer, chunkMarkdown, buildDocsIndex, searchDocs, parseFrontmatter, tokenize, fetchEmails, Imap, decodeWords, partText, parseHeaders, qpBytes, stripHtml, parseDsn, otlpTargets, parseHeaderList, sentryEnvelope, maskUser, maskUrl, originOk, loadEnv, createGate, listenConfig, PROXY_HOSTS, IMAP_HOSTS };
+module.exports = { createServer, chunkMarkdown, buildDocsIndex, searchDocs, parseFrontmatter, tokenize, fetchEmails, Imap, decodeWords, partText, parseHeaders, qpBytes, stripHtml, parseDsn, otlpTargets, parseHeaderList, sentryEnvelope, maskUser, maskUrl, originOk, cleanBrain, loadEnv, createGate, listenConfig, PROXY_HOSTS, IMAP_HOSTS };
 
 if (require.main === module) start();

@@ -21,12 +21,13 @@ Abra `http://127.0.0.1:4242` (ou o `dist/jarvis.html` com dois cliques) no Chrom
 | Arquivo | O que tem | No git? |
 |---|---|---|
 | `src/profile/example.js` | perfil fictício (usado pelos testes e pelo CI) | sim |
-| `src/profile/local.js` | **seu** perfil e o seu Second Brain inicial | não |
+| `src/profile/local.js` | **seu** perfil: cidade, fuso, contas, temas de notícias | não |
+| `data/brain.json` | o **Second Brain** (nome, metas, relações…): a IA lê e grava, você edita no grafo | não (nem no zip) |
 | `.env` / `.env.square` | pasta de notas, senha da hospedagem, telemetria | não |
 | `dist/`, `*.zip` | build e pacote com o seu perfil | não |
 | navegador (localStorage) | chave da OpenAI, senhas de app dos e-mails, links iCal | nunca sai dele, a não ser para a antena |
 
-O `npm run build` usa o `local.js` quando ele existe e o `example.js` quando não existe.
+O `npm run build` usa o `local.js` quando ele existe e o `example.js` quando não existe. O Second Brain começa **vazio** e vive no banco da antena (`GET/PUT /brain`). Diga "Ei Aurora, meu nome é…" e ela salva sozinha. Notas antigas que estiverem no navegador sobem para o banco na primeira conexão.
 
 ### Agenda e e-mails (⚙ no app)
 
